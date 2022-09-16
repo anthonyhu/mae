@@ -1,4 +1,18 @@
 ## Pre-training MAE
+To train on a single node:
+```
+python -m torch.distributed.launch --nproc_per_node=8 main_pretrain.py  --batch_size 64 \
+    --world_size 8 \
+    --accum_iter 8 \
+    --model mae_vit_base_patch16 \
+    --mask_ratio 0.75 \
+    --epochs 800 \
+    --warmup_epochs 40 \
+    --blr 1.5e-4 --weight_decay 0.05  \
+    --output_dir /home/wayve/anthony/experiments/mae/vit_base \
+    --data_path /mnt/local/datasets/dino_train
+```
+
 
 To pre-train ViT-Large (recommended default) with **multi-node distributed training**, run the following on 8 nodes with 8 GPUs each:
 ```
