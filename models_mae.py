@@ -21,6 +21,12 @@ from timm.models.vision_transformer import Block
 from util.pos_embed import get_2d_sincos_pos_embed
 
 
+def freeze_network(network):
+    for p in network.parameters():
+        p.requires_grad = False
+    network.eval()
+
+
 class PatchEmbed(nn.Module):
     """ Image to Patch Embedding
     """
@@ -116,6 +122,15 @@ class MaskedAutoencoderViT(nn.Module):
         elif isinstance(m, nn.LayerNorm):
             nn.init.constant_(m.bias, 0)
             nn.init.constant_(m.weight, 1.0)
+
+    def freeze_encoder(self):
+        freeze_network(self.patch_embed)
+
+        self.cls_token.requires_grad = False
+        self.pos_embed.requires_grad = False
+
+        freeze_network(self.blocks)
+        freeze_network(self.norm)
 
     def patchify(self, imgs):
         """
@@ -224,6 +239,7 @@ class MaskedAutoencoderViT(nn.Module):
         return out, h, w
 
     def forward_encoder(self, x, mask_ratio):
+        self.freeze_encoder()
         # embed patches
         x = self.patch_embed(x)
 
@@ -286,7 +302,7 @@ class MaskedAutoencoderViT(nn.Module):
         loss = (pred - target) ** 2
         loss = loss.mean(dim=-1)  # [N, L], mean loss per patch
 
-        loss = (loss * mask).sum() / mask.sum()  # mean loss on removed patches
+        loss = loss.mean()
         return loss
 
     def forward(self, imgs, mask_ratio=0.75):
