@@ -328,11 +328,27 @@ def load_model(args, model_without_ddp, optimizer, loss_scaler):
     #             loss_scaler.load_state_dict(checkpoint['scaler'])
     #         print("With optim & sched!")
 
-    checkpoint = torch.load(args.resume, map_location='cpu')['model']
-    key_to_delete = ['mask_token']
-    for key in checkpoint.keys():
-        if 'decoder' in key:
-            key_to_delete.append(key)
+
+    if args.pretrained_model == 'mae':
+        #  MAE
+        checkpoint = torch.load(args.resume, map_location='cpu')['model']
+        key_to_delete = ['mask_token']
+        for key in checkpoint.keys():
+            if 'decoder' in key:
+                key_to_delete.append(key)
+    elif args.pretrained_model == 'dino':
+        # DINO
+        checkpoint_tmp = torch.load(args.resume, map_location='cpu')['teacher']
+        checkpoint = {}
+        for k, v in checkpoint_tmp.items():
+            checkpoint[k.replace('backbone.', '')] = v
+
+        key_to_delete = []
+        for key in checkpoint.keys():
+            if 'head' in key:
+                key_to_delete.append(key)
+
+    # Common
     for key in key_to_delete:
         del checkpoint[key]
 
